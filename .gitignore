@@ -33,3 +33,4 @@ build/
 .vscode/
 
 service-account.json
+.DS_Store

@@ -2,29 +2,27 @@ package com.example.optimeal_api.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
- * Minimal Spring Security configuration.
+ * Spring Security configuration.
  *
- * <p>Spring Security is on the classpath (required by spring-boot-starter-security)
- * but we do not use its principal/authentication infrastructure.
- * This configuration:
- * <ul>
- *   <li>Disables CSRF (stateless REST API — no session cookies).</li>
- *   <li>Disables form login and HTTP Basic.</li>
- *   <li>Marks the session policy as STATELESS so no {@code HttpSession} is created.</li>
- *   <li>Permits all requests at the Spring Security level — actual authentication
- *       is enforced by {@link FirebaseTokenFilter} which runs before the security chain
- *       and short-circuits with 401 before the request ever reaches a controller.</li>
- *   <li>Registers {@link FirebaseTokenFilter} before Spring Security's own
- *       {@link UsernamePasswordAuthenticationFilter}.</li>
- * </ul>
+ * <p>CORS is handled at the Spring Security level via a
+ * {@link CorsConfigurationSource} bean so that preflight {@code OPTIONS}
+ * requests are resolved before {@link FirebaseTokenFilter} is invoked.
+ * Without this, Spring Security intercepts the preflight and returns a
+ * {@code 403} before the browser can send the actual credentialed request.
  */
 @Configuration
 @EnableWebSecurity
@@ -39,25 +37,39 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Stateless REST API — no CSRF tokens needed.
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
-
-            // No form login, no HTTP Basic challenge.
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
-
-            // Never create or use an HttpSession — Firebase token is re-verified per request.
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-            // All route-level access decisions are delegated to FirebaseTokenFilter.
-            // Spring Security itself permits everything; the filter handles 401.
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-
-            // Register the Firebase filter early in the chain, before Spring Security
-            // attempts any form-based or Basic authentication processing.
+            .authorizeHttpRequests(auth -> auth
+                // Preflight requests carry no Authorization header by design.
+                // They must be permitted here so they never reach FirebaseTokenFilter.
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .anyRequest().permitAll()
+            )
             .addFilterBefore(firebaseTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+
+        // Required when the browser sends credentialed requests (Authorization header).
+        config.setAllowCredentials(true);
+
+        // Cache the preflight response for 1 hour to reduce OPTIONS round-trips.
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }
