@@ -45,6 +45,10 @@ public class FirebaseTokenFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        // Preflight OPTIONS requests carry no Authorization header. Bypass them.
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
         return !request.getRequestURI().startsWith("/api/v1/");
     }
 
