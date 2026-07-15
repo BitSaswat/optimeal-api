@@ -7,12 +7,8 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 /**
- * Composite primary key for {@link DailyOpts}.
- *
- * <p>Maps to columns (firebase_uid, opt_out_date).
- * Must implement {@link Serializable} and provide value-based
- * {@code equals}/{@code hashCode} as mandated by the JPA specification
- * for embeddable identity classes.
+ * Composite primary key for DailyOpts.
+ * Maps to (firebase_uid, opt_out_date).
  */
 @Embeddable
 public class DailyOptsId implements Serializable {
@@ -25,22 +21,14 @@ public class DailyOptsId implements Serializable {
     @Column(name = "opt_out_date", nullable = false)
     private LocalDate optOutDate;
 
-    // -------------------------------------------------------------------------
-    // Constructors
-    // -------------------------------------------------------------------------
 
-    protected DailyOptsId() {
-        // Required by JPA
-    }
+    protected DailyOptsId() {}
 
     public DailyOptsId(String firebaseUid, LocalDate optOutDate) {
         this.firebaseUid = firebaseUid;
         this.optOutDate  = optOutDate;
     }
 
-    // -------------------------------------------------------------------------
-    // Accessors
-    // -------------------------------------------------------------------------
 
     public String getFirebaseUid() {
         return firebaseUid;
@@ -58,9 +46,6 @@ public class DailyOptsId implements Serializable {
         this.optOutDate = optOutDate;
     }
 
-    // -------------------------------------------------------------------------
-    // Identity — value-based equality required by JPA spec §2.4
-    // -------------------------------------------------------------------------
 
     @Override
     public boolean equals(Object o) {

@@ -8,26 +8,12 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 
 /**
- * JPA entity for the {@code daily_opts} table.
+ * JPA entity mapping for the daily_opts table.
  *
- * <h3>Exception-Log Semantics</h3>
- * <p>This table is a pure exception log — a row exists <em>only</em> when a
- * student has explicitly opted out of at least one meal on a given date.
- * The absence of a row for {@code (firebaseUid, optOutDate)} is
- * mathematically equivalent to being <em>fully opted-in</em> for that day.
- * No cron job or default-row generation is ever required.
- *
- * <h3>Flag Semantics</h3>
- * <ul>
- *   <li>{@code isBreakfastOptedOut = false} → student is attending breakfast</li>
- *   <li>{@code isBreakfastOptedOut = true}  → student has skipped breakfast</li>
- * </ul>
- * The same logic applies to lunch and dinner flags.
- *
- * <h3>Authentication</h3>
- * <p>Identity is anchored to Firebase UID (opaque String, max 128 chars).
- * There is no relational foreign key to a local {@code users} table —
- * Firebase is the authoritative identity source.
+ * This table acts as an exception log. A row only exists if a student opts out
+ * of a meal. If no row exists for a given date, the student is fully opted-in.
+ * 
+ * Identity is tied to the Firebase UID rather than a local users table.
  */
 @Entity
 @Table(
@@ -39,18 +25,10 @@ import java.time.LocalDate;
 )
 public class DailyOpts {
 
-    // -------------------------------------------------------------------------
-    // Identity — composite PK via @EmbeddedId
-    // -------------------------------------------------------------------------
-
     @EmbeddedId
     private DailyOptsId id;
 
-    // -------------------------------------------------------------------------
-    // Opt-out flags
-    // Default false: the row only ever exists because at least one flag is true.
-    // -------------------------------------------------------------------------
-
+    // Default false: row existence implies at least one opt-out.
     @Column(name = "is_breakfast_opted_out", nullable = false)
     private boolean isBreakfastOptedOut = false;
 
@@ -60,13 +38,8 @@ public class DailyOpts {
     @Column(name = "is_dinner_opted_out", nullable = false)
     private boolean isDinnerOptedOut = false;
 
-    // -------------------------------------------------------------------------
-    // Constructors
-    // -------------------------------------------------------------------------
 
-    protected DailyOpts() {
-        // Required by JPA
-    }
+    protected DailyOpts() {}
 
     /**
      * Convenience constructor for service-layer use.
@@ -78,9 +51,6 @@ public class DailyOpts {
         this.id = new DailyOptsId(firebaseUid, optOutDate);
     }
 
-    // -------------------------------------------------------------------------
-    // Composite key accessors (delegated to embedded id)
-    // -------------------------------------------------------------------------
 
     public DailyOptsId getId() {
         return id;
@@ -100,9 +70,6 @@ public class DailyOpts {
         return id != null ? id.getOptOutDate() : null;
     }
 
-    // -------------------------------------------------------------------------
-    // Flag accessors
-    // -------------------------------------------------------------------------
 
     public boolean isBreakfastOptedOut() {
         return isBreakfastOptedOut;

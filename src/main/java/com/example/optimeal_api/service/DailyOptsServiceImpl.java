@@ -17,30 +17,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
- * Implementation of {@link DailyOptsService}.
+ * Implementation of DailyOptsService.
  *
- * <h3>Opt-out flow</h3>
- * <ol>
- *   <li><b>Temporal gate:</b> the cutoff deadline for the requested meal is
- *       evaluated using {@code java.time} <em>before</em> any database interaction.
- *       Late requests are rejected immediately with zero lock overhead.</li>
- *   <li><b>Atomic capacity enforcement:</b> a single PostgreSQL
- *       {@code INSERT ... ON CONFLICT DO UPDATE} issued by
- *       {@link com.example.optimeal_api.repository.MealDailyCountRepository#incrementIfBelowLimit}
- *       atomically increments the per-meal aggregate counter in
- *       {@code meal_daily_counts} <em>only if</em> the current count is below the
- *       computed cap. This is an O(1) single-row operation — no full-table scan or
- *       pessimistic lock on {@code daily_opts} rows is required.</li>
- *   <li><b>Exception-log write:</b> only after a slot is secured does the service
- *       upsert the boolean flag in {@code daily_opts}. An absent row implies the
- *       student is fully opted-in; no background seeding is ever performed.</li>
- * </ol>
- *
- * <h3>Billing flow</h3>
- * <p>{@link #calculateMonthlyBill} is a pure read: it fetches opt-out exception
- * rows for the given date window and derives the financial breakdown
- * arithmetically from the flags stored in {@code daily_opts}. No database
- * state is modified.
+ * Handles temporal validation, atomic capacity enforcement via MealDailyCountRepository, 
+ * and exception-log writes to DailyOptsRepository. 
+ * Also performs read-only financial billing calculations.
  */
 @Service
 public class DailyOptsServiceImpl implements DailyOptsService {
@@ -88,16 +69,8 @@ public class DailyOptsServiceImpl implements DailyOptsService {
 
         long absoluteLimit = (long) (campusPopulation * dynamicCapPercentage);
 
-        // Atomically increment the aggregate counter for this (date, meal_type) pair
-        // using a single INSERT ... ON CONFLICT DO UPDATE statement.
-        //
-        // The UPDATE clause fires only when opt_out_count < absoluteLimit, so
-        // PostgreSQL enforces the cap within a single SQL round-trip on a single
-        // O(1) row — replacing the previous O(N) SELECT COUNT(*) FOR UPDATE that
-        // locked every opted-out row in daily_opts.
-        //
-        // Return value: 1 = counter incremented (slot secured),
-        //               0 = cap already reached (reject the request).
+        // Atomically increment the aggregate counter.
+        // Returns 1 if slot secured, 0 if cap reached.
         int rowsAffected = mealDailyCountRepository.incrementIfBelowLimit(
                 targetDate, mealType.name(), absoluteLimit
         );

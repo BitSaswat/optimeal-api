@@ -22,19 +22,10 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * Servlet filter that authenticates every request under {@code /api/v1/**} using
- * Firebase ID tokens.
+ * Servlet filter that authenticates every API request using Firebase ID tokens.
  *
- * <p>On successful verification, the Firebase UID is stored as the
- * {@code "firebaseUid"} request attribute. Controllers retrieve it exclusively
- * via {@code @RequestAttribute}, preventing any client-supplied value from
- * being substituted as the caller's identity.
- *
- * <p>On failure, the filter short-circuits with {@code 401 Unauthorized} JSON
- * and does not invoke the rest of the filter chain.
- *
- * <p>This filter does not interact with Spring Security's
- * {@code SecurityContextHolder}; it is a transparent identity-extraction layer only.
+ * On successful verification, the Firebase UID is stored as a request attribute.
+ * On failure, the filter short-circuits with a 401 Unauthorized JSON response.
  */
 @Component
 public class FirebaseTokenFilter extends OncePerRequestFilter {

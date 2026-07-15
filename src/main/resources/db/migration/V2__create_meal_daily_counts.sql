@@ -1,14 +1,6 @@
 -- =============================================================================
 -- Table  : meal_daily_counts
--- Purpose: Aggregate opt-out counter per (date, meal_type).
---
---          A single row per (opt_out_date, meal_type) pair stores the running
---          total of students who have opted out of that meal on that date.
---
---          Used by the service layer with an atomic INSERT ... ON CONFLICT DO
---          UPDATE to increment the counter and enforce the vendor cap within a
---          single SQL round-trip, replacing the O(N) SELECT ... FOR UPDATE
---          scan that previously locked every opted-out row in daily_opts.
+-- Purpose: Aggregate opt-out counter per (date, meal_type) to enforce vendor caps.
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS meal_daily_counts (

@@ -13,11 +13,7 @@ import java.util.Map;
 
 /**
  * Centralised exception-to-HTTP mapping for all controllers.
- *
- * <p>All handlers return a uniform JSON schema with {@code timestamp},
- * {@code status}, {@code error}, and {@code message}. Business exceptions
- * include additional structured fields so clients can react without a
- * follow-up request.
+ * Returns a uniform JSON schema for all errors.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {

@@ -18,10 +18,7 @@ import java.time.LocalDate;
 
 /**
  * REST controller for student meal opt-out and billing operations.
- *
- * <p>The caller's identity is sourced exclusively from the {@code "firebaseUid"}
- * request attribute set by {@link com.example.optimeal_api.security.FirebaseTokenFilter}.
- * It is never read from the request body or query string to prevent identity spoofing.
+ * Identity is sourced from the "firebaseUid" request attribute to prevent spoofing.
  */
 @RestController
 @RequestMapping("/api/v1/meals")
@@ -38,9 +35,7 @@ public class DailyOptsController {
             @RequestAttribute("firebaseUid") String firebaseUid,
             @RequestBody OptOutRequest requestBody) {
 
-        // mealType is accepted as a String at the HTTP boundary so that an
-        // unrecognised value produces a structured 400 via GlobalExceptionHandler
-        // rather than an uncontrolled Jackson deserialization error.
+        // Parse mealType manually to handle invalid values gracefully via GlobalExceptionHandler
         MealType mealType;
         try {
             mealType = MealType.valueOf(requestBody.mealType().toUpperCase());
@@ -71,10 +66,7 @@ public class DailyOptsController {
     }
 
     /**
-     * Deserialization target for the opt-out POST body.
-     *
-     * <p>{@code mealType} is a {@code String} rather than a {@link MealType} enum
-     * so that invalid values are caught and mapped to a structured 400 response.
+     * DTO for the opt-out POST body.
      */
     public record OptOutRequest(
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetDate,
