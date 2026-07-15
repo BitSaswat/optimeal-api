@@ -4,7 +4,7 @@ An enterprise-grade Spring Boot API designed to dynamically manage meal-specific
 
 ## Core Architecture
 * **Rolling Temporal Validation:** Enforces strict meal-specific cutoff deadlines (e.g., midnight for breakfast) using native `java.time` to allow accurate vendor preparation.
-* **Concurrency Control:** Utilizes PostgreSQL Pessimistic Locking (`FOR UPDATE`) to enforce daily vendor capacity limits, preventing race conditions during high-traffic cutoff windows.
+* **O(1) Atomic Capacity Enforcement:** Replaces traditional pessimistic locking with an atomic PostgreSQL `INSERT ... ON CONFLICT DO UPDATE` counter, preventing race conditions during high-traffic cutoff windows without N-row locking overhead.
 * **ACID Financial Reconciliation:** Automated background engine using Spring `@Scheduled` and `@Transactional` to process monthly student mess bill rebates without duplicate crediting risk.
 * **Role-Based Access Control (RBAC):** Securely isolates API data views, providing students with financial tracking while serving anonymized, real-time aggregate counts to kitchen staff.
 
@@ -13,5 +13,6 @@ An enterprise-grade Spring Boot API designed to dynamically manage meal-specific
 * **Database:** PostgreSQL
 * **Architecture:** RESTful API, Multi-Tenant Design
 
-## Database Schema (Flat Optimization)
-To ensure lightning-fast aggregations for vendor dashboards, the database relies on a highly flattened, boolean-based schema (`daily_opts`) rather than complex enum state machines. This allows $O(1)$ row-level reads for daily meal tracking and prevents heavy `JOIN` overhead during high-traffic API calls.
+## Database Schema
+* **daily_opts (Exception Log):** A boolean-based, highly flattened schema for lightning-fast $O(1)$ row-level reads. A row is only created when a student explicitly opts out, significantly reducing database footprint.
+* **meal_daily_counts (Aggregate Counter):** A targeted aggregate table for atomic $O(1)$ capacity enforcement per meal type and date, avoiding heavy `JOIN` and `SELECT ... FOR UPDATE` operations.
