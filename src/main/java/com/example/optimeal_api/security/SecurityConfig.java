@@ -47,7 +47,10 @@ public class SecurityConfig {
                 // Preflight requests carry no Authorization header by design.
                 // They must be permitted here so they never reach FirebaseTokenFilter.
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .anyRequest().permitAll()
+                // Fail-safe: any request that is not an OPTIONS preflight and is not
+                // authenticated by FirebaseTokenFilter is rejected by Spring Security
+                // at the framework level, providing defence-in-depth.
+                .anyRequest().authenticated()
             )
             .addFilterBefore(firebaseTokenFilter, UsernamePasswordAuthenticationFilter.class);
 

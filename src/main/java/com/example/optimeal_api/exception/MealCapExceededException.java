@@ -4,10 +4,12 @@ package com.example.optimeal_api.exception;
  * Thrown when the number of students opted out of a specific meal on a given date
  * meets or exceeds the dynamically computed allocation cap.
  *
- * <p>This exception is raised inside a {@code PESSIMISTIC_WRITE}-locked transaction.
- * The unchecked propagation triggers a rollback, releasing all {@code FOR UPDATE}
- * row locks atomically and preventing any concurrent transaction from committing
- * a write that would overshoot the threshold.
+ * <p>This exception is raised by {@link com.example.optimeal_api.service.DailyOptsServiceImpl}
+ * when the atomic {@code INSERT ... ON CONFLICT DO UPDATE} in
+ * {@link com.example.optimeal_api.repository.MealDailyCountRepository#incrementIfBelowLimit}
+ * returns 0 rows affected — meaning PostgreSQL's conditional update clause determined
+ * that {@code opt_out_count >= absoluteLimit} and refused to increment.
+ * No pessimistic row locks are held when this exception is thrown.
  */
 public class MealCapExceededException extends RuntimeException {
 
